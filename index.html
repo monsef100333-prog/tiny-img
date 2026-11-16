@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أداة ضغط وتغيير حجم الصور</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: var(--card);
+      max-width: 600px;
+      width: 100%;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      text-align: center;
+      color: var(--primary);
+    }
+
+    .upload-area {
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #f1f5f9;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .controls {
+      display: none;
+      margin-top: 25px;
+      gap: 15px;
+      flex-direction: column;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .row {
+      display: flex;
+      gap: 15px;
+    }
+
+    .row .control-group {
+      flex: 1;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    input[type="number"], select {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .stats {
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      background: #dcfce7;
+      color: #166534;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .preview-box {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .preview-box img {
+      max-width: 100%;
+      max-height: 250px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>أداة ضغط وتغيير حجم الصور</h1>
+
+  <!-- منطقة رفع الصورة -->
+  <div class="upload-area" id="dropZone">
+    <p style="margin: 0; font-weight: 600;">اسحب الصورة وأفلتها هنا، أو انقر للاختيار</p>
+    <p style="margin: 5px 0 0; font-size: 0.85rem; color: #64748b;">يدعم JPG, PNG, WEBP</p>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+  </div>
+
+  <!-- أدوات التحكم والمعاينة -->
+  <div class="controls" id="controls">
+    <div class="row">
+      <div class="control-group">
+        <label for="widthInput">العرض (بكسل):</label>
+        <input type="number" id="widthInput" min="10">
+      </div>
+      <div class="control-group">
+        <label for="heightInput">الارتفاع (بكسل):</label>
+        <input type="number" id="heightInput" min="10">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="aspectRatio" checked> الحفاظ على تناسب الأبعاد (Aspect Ratio)
+      </label>
+    </div>
+
+    <div class="row">
+      <div class="control-group">
+        <label for="qualityInput">جودة الضغط: <span id="qualityValue">80</span>%</label>
+        <input type="range" id="qualityInput" min="10" max="100" value="80">
+      </div>
+      <div class="control-group">
+        <label for="formatSelect">صيغة الحفظ:</label>
+        <select id="formatSelect">
+          <option value="image/webp">WEBP (الأفضل للويب)</option>
+          <option value="image/jpeg">JPEG</option>
+          <option value="image/png">PNG</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- إحصائيات الحجم -->
+    <div class="stats">
+      <span>الأصلي: <strong id="originalSize">0 KB</strong></span>
+      <span>الجديد: <strong id="newSize">0 KB</strong> <span class="badge" id="savedPercent">-0%</span></span>
+    </div>
+
+    <!-- معاينة الصورة -->
+    <div class="preview-box">
+      <img id="previewImg" alt="معاينة الصورة">
+    </div>
+
+    <!-- زر التحميل -->
+    <a id="downloadBtn" class="btn" download="compressed-image.webp">تحميل الصورة المضغوطة</a>
+  </div>
+</div>
+
+<script>
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const controls = document.getElementById('controls');
+  const widthInput = document.getElementById('widthInput');
+  const heightInput = document.getElementById('heightInput');
+  const aspectRatioCheckbox = document.getElementById('aspectRatio');
+  const qualityInput = document.getElementById('qualityInput');
+  const qualityValue = document.getElementById('qualityValue');
+  const formatSelect = document.getElementById('formatSelect');
+  const originalSizeEl = document.getElementById('originalSize');
+  const newSizeEl = document.getElementById('newSize');
+  const savedPercentEl = document.getElementById('savedPercent');
+  const previewImg = document.getElementById('previewImg');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  let originalImage = new Image();
+  let originalFileSize = 0;
+  let originalRatio = 1;
+  let originalFileName = 'image';
+
+  // فتح نافذة اختيار الملفات عند النقر
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  // دعم السحب والإفلات (Drag & Drop)
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  // قراءة الصورة المرفوعة
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) return;
+
+    originalFileSize = file.size;
+    originalFileName = file.name.split('.').slice(0, -1).join('.');
+    originalSizeEl.textContent = formatBytes(originalFileSize);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      originalImage.onload = () => {
+        widthInput.value = originalImage.width;
+        heightInput.value = originalImage.height;
+        originalRatio = originalImage.width / originalImage.height;
+        controls.style.display = 'flex';
+        processImage();
+      };
+      originalImage.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // الحفاظ على التناسب عند تغيير العرض أو الارتفاع
+  widthInput.addEventListener('input', () => {
+    if (aspectRatioCheckbox.checked && widthInput.value) {
+      heightInput.value = Math.round(widthInput.value / originalRatio);
+    }
+    processImage();
+  });
+
+  heightInput.addEventListener('input', () => {
+    if (aspectRatioCheckbox.checked && heightInput.value) {
+      widthInput.value = Math.round(heightInput.value * originalRatio);
+    }
+    processImage();
+  });
+
+  qualityInput.addEventListener('input', () => {
+    qualityValue.textContent = qualityInput.value;
+    processImage();
+  });
+
+  formatSelect.addEventListener('change', processImage);
+
+  // دالة المعالجة والضغط عبر Canvas
+  function processImage() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const targetWidth = parseInt(widthInput.value) || originalImage.width;
+    const targetHeight = parseInt(heightInput.value) || originalImage.height;
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    // رسم الصورة بالأبعاد الجديدة
+    ctx.drawImage(originalImage, 0, 0, targetWidth, targetHeight);
+
+    const format = formatSelect.value;
+    const quality = parseInt(qualityInput.value) / 100;
+
+    // تحويل Canvas إلى ملف مضغوط (Blob) لحساب الحجم الفعلي
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+
+      const newUrl = URL.createObjectURL(blob);
+      previewImg.src = newUrl;
+      downloadBtn.href = newUrl;
+
+      // تحديد امتداد الملف للتحميل
+      const ext = format.split('/')[1];
+      downloadBtn.download = `${originalFileName}-compressed.${ext}`;
+
+      // تحديث الإحصائيات
+      newSizeEl.textContent = formatBytes(blob.size);
+      const saved = Math.round(((originalFileSize - blob.size) / originalFileSize) * 100);
+      savedPercentEl.textContent = saved > 0 ? `-${saved}%` : `+${Math.abs(saved)}%`;
+      savedPercentEl.style.background = saved > 0 ? '#dcfce7' : '#fee2e2';
+      savedPercentEl.style.color = saved > 0 ? '#166534' : '#991b1b';
+
+    }, format, quality);
+  }
+
+  // دالة لتحويل البايت إلى KB أو MB
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+</script>
+</body>
+</html>
